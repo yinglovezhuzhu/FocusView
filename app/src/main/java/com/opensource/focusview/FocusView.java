@@ -40,6 +40,8 @@ public class FocusView extends View {
 
     private boolean mEnabled = true;
 
+    private boolean mAutoDismiss = false;
+
     private OnLongTouchListener mLongTouchListener;
 
 
@@ -61,15 +63,15 @@ public class FocusView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         switch (mState) {
-            case STATE_IDLE:    //空闲状态
+            case STATE_IDLE:    //STATE_IDLE, draw nothing.
                 return;
-            case STATE_FOCUSING://正在对焦
+            case STATE_FOCUSING://STATE_FOCUSING
                 mPaint.setColor(mNormalColor);
                 break;
-            case STATE_SUCCESS://对焦成功
+            case STATE_SUCCESS://STATE_SUCCESS
                 mPaint.setColor(mSuccessColor);
                 break;
-            case STATE_FAILED://对焦失败
+            case STATE_FAILED://STATE_FAILED
                 mPaint.setColor(mFailedColor);
                 break;
             default:
@@ -104,12 +106,6 @@ public class FocusView extends View {
                             mState = STATE_FOCUSING;
                             invalidate();
                             mHandler.sendEmptyMessageDelayed(MSG_UPDATE_DRAW, 20);
-                            mHandler.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    focusFailed();
-                                }
-                            }, 200);
                         }
                     }
                     break;
@@ -121,11 +117,44 @@ public class FocusView extends View {
         return super.onTouchEvent(event);
     }
 
+    /**
+     * Enable or disable this FocusView <br/>
+     * <p/>If the FocusView was disabled, it won't show any thing when touch it.<br/>
+     * @param enabled
+     */
     public void setEnabled(boolean enabled) {
         this.mEnabled = enabled;
+        mState = STATE_IDLE;
+        invalidate();
     }
 
+    /**
+     * Get the state of this FocusView
+     * @return
+     */
+    public boolean isEnabled() {
+        return mEnabled;
+    }
+
+    public void setAutoDismiss(boolean autoDismiss) {
+        this.mAutoDismiss = autoDismiss;
+    }
+
+    public boolean isAutoDismiss() {
+        return mAutoDismiss;
+    }
+
+    /**
+     * Focus success <br/>
+     * <p/>
+     *
+     * <br/>
+     * @see {@link #focusFailed()}
+     */
     public void focusSuccessed() {
+        if(!mEnabled) {
+            return;
+        }
         mState = STATE_SUCCESS;
         if(mCurrentRadius <= mMinRadius) {
             invalidate();
@@ -133,7 +162,16 @@ public class FocusView extends View {
         }
     }
 
+    /**
+     * Focus failed <br/>
+     *
+     * <br/>
+     * @see {@link #focusSuccessed()} )}
+     */
     public void focusFailed() {
+        if(!mEnabled) {
+            return;
+        }
         mState = STATE_FAILED;
         if(mCurrentRadius <= mMinRadius) {
             invalidate();
@@ -173,7 +211,7 @@ public class FocusView extends View {
                         invalidate();
                         mHandler.sendEmptyMessageDelayed(MSG_UPDATE_DRAW, 20);
                     } else {
-                        if(mState == STATE_SUCCESS || mState == STATE_FAILED) {
+                        if(mState == STATE_SUCCESS || mState == STATE_FAILED || mAutoDismiss) {
                             mHandler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {

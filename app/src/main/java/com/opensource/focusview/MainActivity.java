@@ -4,14 +4,31 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
 
 
 public class MainActivity extends Activity {
+
+    private FocusView mFocusView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mFocusView = (FocusView) findViewById(R.id.fv_focus);
+        mFocusView.setAutoDismiss(true);
+
+        ToggleButton toggleButton = (ToggleButton) findViewById(R.id.tbtn_enable);
+        toggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mFocusView.setEnabled(isChecked);
+            }
+        });
+        toggleButton.setChecked(true);
+        mFocusView.setEnabled(toggleButton.isChecked());
     }
 
 
