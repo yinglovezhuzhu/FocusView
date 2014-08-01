@@ -80,22 +80,38 @@ public class FocusView extends View {
         super.onDraw(canvas);
     }
 
+    private long mDownTime = 0L;
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if(mEnabled) {
+        if(mEnabled && mState == STATE_IDLE) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
+                    mDownTime = System.currentTimeMillis();
                     mCenter.x = event.getX();
                     mCenter.y = event.getY();
-                    fixCenterPoint();
-                    mCurrentRadius = mMaxRadius;
-                    mState = STATE_FOCUSING;
-                    invalidate();
-                    mHandler.sendEmptyMessageDelayed(MSG_UPDATE_DRAW, 20);
                     break;
                 case MotionEvent.ACTION_MOVE:
                     break;
                 case MotionEvent.ACTION_UP:
+                    if(mCenter.x - event.getX() < 10f && mCenter.y - event.getY() < 10f) {
+                        if(System.currentTimeMillis() - mDownTime > 500) {
+                            if(null != mLongTouchListener) {
+                                mLongTouchListener.onLongTouch(FocusView.this);
+                            }
+                        } else {
+                            fixCenterPoint();
+                            mCurrentRadius = mMaxRadius;
+                            mState = STATE_FOCUSING;
+                            invalidate();
+                            mHandler.sendEmptyMessageDelayed(MSG_UPDATE_DRAW, 20);
+                            mHandler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    focusFailed();
+                                }
+                            }, 200);
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -111,10 +127,18 @@ public class FocusView extends View {
 
     public void focusSuccessed() {
         mState = STATE_SUCCESS;
+        if(mCurrentRadius <= mMinRadius) {
+            invalidate();
+            mHandler.sendEmptyMessage(MSG_UPDATE_DRAW);
+        }
     }
 
     public void focusFailed() {
         mState = STATE_FAILED;
+        if(mCurrentRadius <= mMinRadius) {
+            invalidate();
+            mHandler.sendEmptyMessage(MSG_UPDATE_DRAW);
+        }
     }
 
     public void setOnLongTouchListener(OnLongTouchListener l) {
@@ -146,11 +170,18 @@ public class FocusView extends View {
                 case MSG_UPDATE_DRAW:
                     if(mCurrentRadius > mMinRadius) {
                         mCurrentRadius -= 2;
-                        if(mCurrentRadius < mMinRadius + 5) {
-                            focusSuccessed();
-                        }
                         invalidate();
                         mHandler.sendEmptyMessageDelayed(MSG_UPDATE_DRAW, 20);
+                    } else {
+                        if(mState == STATE_SUCCESS || mState == STATE_FAILED) {
+                            mHandler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mState = STATE_IDLE;
+                                    invalidate();
+                                }
+                            }, 500);
+                        }
                     }
                     break;
                 default:
